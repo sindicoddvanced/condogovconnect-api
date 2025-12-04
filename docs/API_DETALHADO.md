@@ -384,7 +384,7 @@ Integração com Expo Push Notifications usando tokens armazenados na tabela `pu
       "data": { "type": "custom", "any": "payload" }
     }
     ```
-  - Fluxo: busca tokens na tabela `push_tokens` (MCP → fallback Supabase), valida tokens Expo, envia em chunks com `expo-server-sdk`.
+  - Fluxo: busca tokens na tabela `push_tokens` (MCP → fallback Supabase), valida tokens Expo, envia em chunks via HTTP para `https://exp.host/--/api/v2/push/send`.
   - Resposta (exemplo):
     ```json
     {
@@ -404,7 +404,7 @@ Integração com Expo Push Notifications usando tokens armazenados na tabela `pu
 
 Requisitos:
 
-- Dependência: `expo-server-sdk`
+- Sem dependência extra: envio via HTTP para o endpoint do Expo.
 - Tabela `push_tokens` contendo, no mínimo: `employee_id`, `push_token`, `company_id` (opcional), `device_id` (opcional), `platform` (opcional), `created_at`, `updated_at`.
 - Índices (recomendado): unique `(employee_id, push_token)`, índices por `employee_id` e `push_token`.
 

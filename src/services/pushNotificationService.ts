@@ -1,4 +1,3 @@
-import { Expo, ExpoPushMessage } from "expo-server-sdk";
 import { getSupabaseServiceClient } from "../utils/supabaseClient.js";
 import { SUPABASE_PROJECT_ID, mcp_supabase_execute_sql } from "../mcp-functions.js";
 
@@ -18,7 +17,17 @@ export type SendPushResult = {
   };
 };
 
-const expo = new Expo();
+function isExpoPushToken(token: string): boolean {
+  return /^ExponentPushToken\[[A-Za-z0-9+\-/_=.]+\]$/.test(token);
+}
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    out.push(arr.slice(i, i + size));
+  }
+  return out;
+}
 
 export class PushNotificationService {
   /**
@@ -90,31 +99,43 @@ export class PushNotificationService {
       };
     }
 
-    const validTokens = tokens.filter((t) => Expo.isExpoPushToken(t));
+    const validTokens = tokens.filter((t) => isExpoPushToken(t));
     if (validTokens.length === 0) {
       return {
         success: false,
         message: "Nenhum token Expo válido encontrado",
         metrics: { totalTokensFound, validExpoTokens: 0, ticketsSent: 0 },
-        details: { invalidTokens: tokens.filter((t) => !Expo.isExpoPushToken(t)) },
+        details: { invalidTokens: tokens.filter((t) => !isExpoPushToken(t)) },
       };
     }
 
-    const messages: ExpoPushMessage[] = validTokens.map((to) => ({
-      to,
-      sound: "default",
-      title,
-      body,
-      data: data || {},
-    }));
+    const messages = validTokens.map((to) => {
+      return {
+        to,
+        sound: "default",
+        title,
+        body,
+        data: data || {},
+      };
+    });
 
-    const chunks = expo.chunkPushNotifications(messages);
+    const chunks = chunkArray(messages, 99); // Expo recomenda até ~100 por request
     let sent = 0;
 
     for (const chunk of chunks) {
       try {
-        const tickets = await expo.sendPushNotificationsAsync(chunk);
-        sent += tickets.length;
+        const res = await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(chunk),
+        });
+        if (res.ok) {
+          const json = await res.json().catch(() => ({}));
+          // Considerar sucesso pelo número enviado; Expo retorna 'data' com tickets
+          sent += chunk.length;
+        }
       } catch {
         // continuar com os demais chunks
       }
