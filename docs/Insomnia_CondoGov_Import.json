@@ -1,0 +1,98 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-11-20T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:custom",
+  "resources": [
+    {
+      "_id": "wrk_condogov_imports",
+      "_type": "workspace",
+      "name": "CondoGov Imports",
+      "scope": "collection"
+    },
+    {
+      "_id": "req_ingest_auto_residents",
+      "_type": "request",
+      "parentId": "wrk_condogov_imports",
+      "name": "Ingest Auto (Moradores - base64)",
+      "method": "POST",
+      "url": "http://localhost:3000/api/documents/ingest-auto",
+      "headers": [
+        { "name": "x-company-id", "value": "559d2e2e-fa0e-463d-a3f9-d770fcaa83de" },
+        { "name": "x-user-id", "value": "admin" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"fileName\": \"encantos_moradores.csv\",\n  \"fileBase64\": \"{{ file 'docs/encantos_moradores.csv', 'base64' }}\",\n  \"subject\": \"auto\",\n  \"options\": { \"dryRun\": false, \"companyName\": \"Encantos do Norte\" }\n}"
+      }
+    },
+    {
+      "_id": "req_ingest_auto_units",
+      "_type": "request",
+      "parentId": "wrk_condogov_imports",
+      "name": "Ingest Auto (Unidades - base64)",
+      "method": "POST",
+      "url": "http://localhost:3000/api/documents/ingest-auto",
+      "headers": [
+        { "name": "x-company-id", "value": "559d2e2e-fa0e-463d-a3f9-d770fcaa83de" },
+        { "name": "x-user-id", "value": "admin" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"fileName\": \"encantos_unidades.csv\",\n  \"fileBase64\": \"{{ file 'docs/encantos_unidades.csv', 'base64' }}\",\n  \"subject\": \"auto\",\n  \"options\": { \"dryRun\": false, \"companyName\": \"Encantos do Norte\" }\n}"
+      }
+    },
+    {
+      "_id": "req_import_units_base64",
+      "_type": "request",
+      "parentId": "wrk_condogov_imports",
+      "name": "Importar Unidades (base64)",
+      "method": "POST",
+      "url": "http://localhost:3000/api/documents/extract/base64",
+      "headers": [
+        { "name": "x-company-id", "value": "559d2e2e-fa0e-463d-a3f9-d770fcaa83de" },
+        { "name": "x-user-id", "value": "admin" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"fileName\": \"encantos_unidades.csv\",\n  \"fileBase64\": \"{{ file 'docs/encantos_unidades.csv', 'base64' }}\",\n  \"schema\": {\n    \"entity\": \"unit\",\n    \"description\": \"Importar unidades do condomínio (salva em condominium_units)\",\n    \"fields\": [\n      { \"name\": \"block\", \"type\": \"string\" },\n      { \"name\": \"floor\", \"type\": \"number\" },\n      { \"name\": \"number\", \"type\": \"string\", \"required\": true },\n      { \"name\": \"type\", \"type\": \"string\" },\n      { \"name\": \"area\", \"type\": \"number\" },\n      { \"name\": \"bedrooms\", \"type\": \"number\" },\n      { \"name\": \"bathrooms\", \"type\": \"number\" },\n      { \"name\": \"parking_spaces\", \"type\": \"number\" },\n      { \"name\": \"occupancy_status\", \"type\": \"string\" },\n      { \"name\": \"owner_name\", \"type\": \"string\" },\n      { \"name\": \"owner_document\", \"type\": \"string\" },\n      { \"name\": \"owner_phone\", \"type\": \"string\" },\n      { \"name\": \"owner_email\", \"type\": \"string\" },\n      { \"name\": \"monthly_fee\", \"type\": \"number\" },\n      { \"name\": \"special_notes\", \"type\": \"string\" }\n    ],\n    \"output\": {\n      \"type\": \"array\",\n      \"itemName\": \"unit\",\n      \"dedupeBy\": [\"number\", \"block\"],\n      \"target\": { \"table\": \"condominium_units\", \"upsertKeys\": [\"company_id\", \"number\", \"block\"] }\n    },\n    \"locale\": \"pt-BR\",\n    \"documentType\": \"unit_roster\"\n  },\n  \"options\": { \"dryRun\": false, \"companyName\": \"Encantos do Norte\" }\n}"
+      }
+    },
+    {
+      "_id": "req_import_residents_base64",
+      "_type": "request",
+      "parentId": "wrk_condogov_imports",
+      "name": "Importar Moradores (base64)",
+      "method": "POST",
+      "url": "http://localhost:3000/api/documents/extract/base64",
+      "headers": [
+        { "name": "x-company-id", "value": "559d2e2e-fa0e-463d-a3f9-d770fcaa83de" },
+        { "name": "x-user-id", "value": "admin" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"fileName\": \"encantos_moradores.csv\",\n  \"fileBase64\": \"{{ file 'docs/encantos_moradores.csv', 'base64' }}\",\n  \"schema\": {\n    \"entity\": \"resident\",\n    \"description\": \"Importar moradores usando unitNumber (backend resolve unit_id)\",\n    \"fields\": [\n      { \"name\": \"unitNumber\", \"type\": \"string\", \"required\": true },\n      { \"name\": \"block\", \"type\": \"string\" },\n      { \"name\": \"name\", \"type\": \"string\", \"required\": true },\n      { \"name\": \"document\", \"type\": \"string\" },\n      { \"name\": \"phone\", \"type\": \"string\" },\n      { \"name\": \"email\", \"type\": \"string\" },\n      { \"name\": \"relationship\", \"type\": \"string\" },\n      { \"name\": \"is_primary\", \"type\": \"boolean\" },\n      { \"name\": \"status\", \"type\": \"string\" },\n      { \"name\": \"type\", \"type\": \"string\" },\n      { \"name\": \"special_notes\", \"type\": \"string\" }\n    ],\n    \"output\": {\n      \"type\": \"array\",\n      \"itemName\": \"resident\",\n      \"dedupeBy\": [\"unitNumber\", \"name\"],\n      \"target\": { \"table\": \"condominium_residents\", \"upsertKeys\": [\"company_id\", \"unit_id\", \"name\"] }\n    },\n    \"locale\": \"pt-BR\",\n    \"documentType\": \"resident_roster\"\n  },\n  \"options\": { \"dryRun\": false, \"companyName\": \"Encantos do Norte\" }\n}"
+      }
+    },
+    {
+      "_id": "req_verify_import",
+      "_type": "request",
+      "parentId": "wrk_condogov_imports",
+      "name": "Verificar Importação",
+      "method": "GET",
+      "url": "http://localhost:3000/api/documents/verify-import",
+      "parameters": [
+        { "name": "companyId", "value": "559d2e2e-fa0e-463d-a3f9-d770fcaa83de" }
+      ],
+      "headers": [
+        { "name": "x-company-id", "value": "559d2e2e-fa0e-463d-a3f9-d770fcaa83de" },
+        { "name": "x-user-id", "value": "admin" }
+      ]
+    }
+  ]
+}
+

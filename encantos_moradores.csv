@@ -1,0 +1,7 @@
+﻿unitNumber,block,name,document,phone,email,relationship,is_primary,status,type,special_notes
+A-101,Bloco A,JoÃ£o Silva,123.456.789-00,(11) 99999-1111,joao.silva@encantos.com,proprietario,true,ativo,residente,
+A-102,Bloco A,Maria Santos,987.654.321-00,(11) 99999-2222,maria.santos@encantos.com,proprietario,true,ativo,residente,
+A-201,Bloco A,Carlos Lima,111.222.333-44,(11) 99999-3333,carlos.lima@encantos.com,proprietario,true,ativo,residente,"Pets: 1"
+B-101,Bloco B,Ana Souza,222.333.444-55,(11) 99999-4444,ana.souza@encantos.com,proprietario,true,ativo,residente,
+B-201,Bloco B,Ricardo Alves,333.444.555-66,(11) 99999-5555,ricardo.alves@encantos.com,proprietario,true,ativo,residente,"Vaga extra"
+C-301,Bloco C,---,,,,"",false,inativo,residente,"Unidade em reforma"

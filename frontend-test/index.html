@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CondoGov API — Front de Testes</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>CondoGov API — Front de Testes</h1>
+      <p>Cliente simples para testar endpoints sem alterar a API.</p>
+    </header>
+
+    <section class="card">
+      <h2>Configuração</h2>
+      <div class="grid">
+        <label>
+          URL da API
+          <input id="apiUrl" type="text" placeholder="http://localhost:3000" />
+        </label>
+        <label>
+          x-company-id (UUID)
+          <input id="companyId" type="text" placeholder="00000000-0000-0000-0000-000000000000" />
+        </label>
+        <label>
+          x-user-id
+          <input id="userId" type="text" placeholder="user123" />
+        </label>
+      </div>
+      <div class="row">
+        <button id="saveCfg">Salvar configuração</button>
+        <button id="clearLog" class="secondary">Limpar log</button>
+      </div>
+      <small>
+        Dica: a API permite CORS por padrão para
+        http://localhost:3000, http://localhost:5173, http://localhost:8080.
+      </small>
+    </section>
+
+    <section class="card">
+      <h2>Notificações (Expo)</h2>
+      <div class="grid">
+        <label>
+          Employee ID
+          <input id="notifEmployeeId" type="text" placeholder="employee-123" />
+        </label>
+        <label>
+          Push Token
+          <input id="notifPushToken" type="text" placeholder="ExponentPushToken[xxxxxxxxxxxxxx]" />
+        </label>
+        <label>
+          Device ID (opcional)
+          <input id="notifDeviceId" type="text" placeholder="device-uuid" />
+        </label>
+        <label>
+          Platform
+          <select id="notifPlatform">
+            <option value="unknown">unknown</option>
+            <option value="ios">ios</option>
+            <option value="android">android</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid">
+        <label>
+          Título
+          <input id="notifTitle" type="text" placeholder="Título da notificação" />
+        </label>
+        <label>
+          Mensagem
+          <input id="notifBody" type="text" placeholder="Corpo da mensagem" />
+        </label>
+      </div>
+      <label>
+        Data (JSON opcional)
+        <textarea id="notifData" rows="6" placeholder='{"type":"test"}'></textarea>
+      </label>
+      <div class="row">
+        <button id="btnRegisterToken">POST /api/notifications/register-token</button>
+        <button id="btnSendNotification">POST /api/notifications/send</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Ingestão automática</h2>
+      <div class="grid">
+        <label>
+          Assunto
+          <select id="subject">
+            <option value="auto">auto</option>
+            <option value="moradores">moradores</option>
+            <option value="unidades">unidades</option>
+          </select>
+        </label>
+        <label>
+          Dry Run
+          <select id="dryRun">
+            <option value="false">false</option>
+            <option value="true">true</option>
+          </select>
+        </label>
+        <label>
+          Company Name (opcional)
+          <input id="companyName" type="text" placeholder="Encantos do Norte" />
+        </label>
+      </div>
+      <div class="uploader" id="dropzone">
+        <input id="fileInput" type="file" />
+        <p>Arraste e solte arquivo aqui ou clique para selecionar (CSV/XLSX/PDF)</p>
+      </div>
+      <div class="row">
+        <button id="sendIngest">Enviar /api/documents/ingest-auto</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Verificação de importação</h2>
+      <div class="row">
+        <button id="btnVerifyImport">GET /api/documents/verify-import</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Schemas</h2>
+      <div class="grid">
+        <label>
+          Tabela (schema-from-table)
+          <input id="schemaTable" type="text" placeholder="condominium_units" />
+        </label>
+        <label>
+          Mode
+          <select id="schemaMode">
+            <option value="direct">direct</option>
+            <option value="withUnitNumber">withUnitNumber</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <button id="btnListSchemas">GET /api/documents/extract/schemas</button>
+        <button id="btnSchemaFromTable">GET /api/documents/extract/schema-from-table</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Extração (base64) — /api/documents/extract/base64</h2>
+      <div class="grid">
+        <label>
+          Template
+          <select id="b64Template">
+            <option value="">— selecionar (carrega via GET /extract/schemas) —</option>
+            <option value="unitSchema">unitSchema</option>
+            <option value="residentSchemaWithUnitId">residentSchemaWithUnitId</option>
+            <option value="residentSchemaWithUnitNumber">residentSchemaWithUnitNumber</option>
+          </select>
+        </label>
+        <label>
+          Dry Run
+          <select id="b64DryRun">
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        Schema (JSON opcional — se vazio, usa Template)
+        <textarea id="b64Schema" rows="10" placeholder='{"entity":"unit","fields":[...],"output":{"type":"array","target":{"table":"condominium_units"}}}'></textarea>
+      </label>
+      <div class="uploader" id="dropB64">
+        <input id="fileB64" type="file" />
+        <p>Arraste ou selecione arquivo para extrair (CSV/XLSX/PDF)</p>
+      </div>
+      <div class="row">
+        <button id="btnExtractB64">POST /api/documents/extract/base64</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Extração (multipart) — /api/documents/extract</h2>
+      <div class="grid">
+        <label>
+          Dry Run
+          <select id="mpDryRun">
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        Schema (JSON)
+        <textarea id="mpSchema" rows="10" placeholder='{"entity":"resident","fields":[...],"output":{"type":"array","target":{"table":"condominium_residents"}}}'></textarea>
+      </label>
+      <label>
+        Options (JSON opcional)
+        <textarea id="mpOptions" rows="6" placeholder='{"companyName":"Encantos do Norte"}'></textarea>
+      </label>
+      <div class="uploader" id="dropMp">
+        <input id="fileMp" type="file" />
+        <p>Arraste ou selecione arquivo (CSV/XLSX/PDF)</p>
+      </div>
+      <div class="row">
+        <button id="btnExtractMp">POST /api/documents/extract (multipart)</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Knowledge Stats</h2>
+      <div class="row">
+        <button id="btnKnowledgeStats">GET /api/documents/knowledge/stats</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Log</h2>
+      <pre id="log" class="log"></pre>
+    </section>
+
+    <footer>
+      <small>
+        Este cliente não altera nenhum código do backend. Sirva esta pasta em
+        http://localhost:5173 ou http://localhost:8080 para evitar bloqueios de CORS.
+      </small>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+  </html>
+
+

@@ -1,0 +1,7 @@
+﻿number,block,floor,type,area,bedrooms,bathrooms,parking_spaces,occupancy_status,owner_name,owner_document,owner_phone,owner_email,monthly_fee,special_notes
+A-101,Bloco A,1,Apartamento,65,2,1,1,ocupada,JoÃ£o Silva,123.456.789-00,(11) 99999-1111,joao.silva@encantos.com,450,
+A-102,Bloco A,1,Apartamento,80,3,2,1,ocupada,Maria Santos,987.654.321-00,(11) 99999-2222,maria.santos@encantos.com,520,
+A-201,Bloco A,2,Apartamento,75,2,2,1,ocupada,Carlos Lima,111.222.333-44,(11) 99999-3333,carlos.lima@encantos.com,500,"Pets: 1"
+B-101,Bloco B,1,Studio,40,1,1,0,ocupada,Ana Souza,222.333.444-55,(11) 99999-4444,ana.souza@encantos.com,380,
+B-201,Bloco B,2,Duplex,95,3,3,2,ocupada,Ricardo Alves,333.444.555-66,(11) 99999-5555,ricardo.alves@encantos.com,650,"Vaga extra"
+C-301,Bloco C,3,Loft,55,1,1,1,desocupada,,,,,0,"Em reforma"
