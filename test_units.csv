@@ -1,0 +1,4 @@
+﻿number,block,floor,area,bedrooms,bathrooms,parking_spaces,owner_name,owner_document,owner_phone,owner_email,monthly_fee
+A-101,Bloco A,1,65,2,1,1,JoÃ£o Silva,123.456.789-00,(11) 99999-1111,joao@example.com,450
+A-102,Bloco A,1,80,3,2,1,Maria Santos,987.654.321-00,(11) 99999-2222,maria@example.com,520
+B-201,Bloco B,2,75,2,2,2,Carlos Lima,111.222.333-44,(11) 99999-3333,carlos@example.com,500

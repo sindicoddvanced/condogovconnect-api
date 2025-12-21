@@ -1,0 +1,4 @@
+﻿unitNumber,block,name,document,phone,email,relationship,is_primary,status,type,special_notes
+A-101,Bloco A,JoÃ£o Silva,123.456.789-00,(11) 99999-1111,joao@example.com,proprietario,true,ativo,residente,
+A-102,Bloco A,Maria Santos,987.654.321-00,(11) 99999-2222,maria@example.com,proprietario,true,ativo,residente,
+B-201,Bloco B,Carlos Lima,111.222.333-44,(11) 99999-3333,carlos@example.com,proprietario,true,ativo,residente,
