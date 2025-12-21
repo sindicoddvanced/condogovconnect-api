@@ -13,7 +13,13 @@ coverage
 # logs
 logs
 _.log
+server.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# temporary audio files
+temp_*.wav
+temp_*.mp3
+temp_*.mp4
 
 # dotenv environment variable files
 .env
