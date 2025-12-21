@@ -21,7 +21,7 @@ app.use("*", prettyJSON());
 // CORS configurável via ambiente (CORS_ORIGINS=orig1,orig2)
 const corsOrigins = (
   process.env.CORS_ORIGINS ||
-  "http://localhost:3000,http://localhost:5173,http://localhost:8080"
+  "http://localhost:3000,http://localhost:5173,http://localhost:8080,https://condo-gov-connect.vercel.app"
 )
   .split(",")
   .map((o) => o.trim())
