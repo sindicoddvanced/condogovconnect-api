@@ -1146,6 +1146,125 @@ documents.post("/text-to-speech", async (c) => {
   }
 });
 
+// POST /documents/duplicate - Duplica um registro de qualquer tabela
+// Body: { table: string, id: string, excludeFields?: string[] }
+documents.post("/duplicate", async (c) => {
+  try {
+    const companyId = c.req.header("x-company-id");
+    const userId = c.req.header("x-user-id");
+    
+    if (!companyId) {
+      return c.json(
+        {
+          success: false,
+          error: "Empresa não identificada",
+          message: "Header x-company-id é obrigatório",
+        },
+        400
+      );
+    }
+
+    if (!userId) {
+      return c.json(
+        {
+          success: false,
+          error: "Usuário não identificado",
+          message: "Header x-user-id é obrigatório",
+        },
+        400
+      );
+    }
+
+    const body = await c.req.json();
+    const { table, id, excludeFields = ["id", "created_at", "updated_at"] } = body;
+
+    if (!table || !id) {
+      return c.json(
+        {
+          success: false,
+          error: "Dados inválidos",
+          message: "Campos 'table' e 'id' são obrigatórios",
+        },
+        400
+      );
+    }
+
+    console.log(`[Duplicate] Duplicando registro da tabela ${table}, ID: ${id}, Company: ${companyId}`);
+
+    // Buscar o registro original
+    const { data: original, error: fetchError } = await supabase
+      .from(table)
+      .select("*")
+      .eq("id", id)
+      .eq("company_id", companyId) // Garantir que pertence à empresa
+      .single();
+
+    if (fetchError || !original) {
+      return c.json(
+        {
+          success: false,
+          error: "Registro não encontrado",
+          message: `Registro com ID ${id} não foi encontrado na tabela ${table} para esta empresa`,
+        },
+        404
+      );
+    }
+
+    // Criar cópia excluindo campos especificados
+    const copy: any = { ...original };
+    excludeFields.forEach((field: string) => {
+      delete copy[field];
+    });
+
+    // Garantir que company_id está correto
+    copy.company_id = companyId;
+
+    // Se houver campo name, adicionar " (Cópia)" ao nome
+    if (copy.name && typeof copy.name === "string") {
+      copy.name = `${copy.name} (Cópia)`;
+    } else if (copy.title && typeof copy.title === "string") {
+      copy.title = `${copy.title} (Cópia)`;
+    }
+
+    // Inserir a cópia
+    const { data: duplicated, error: insertError } = await supabase
+      .from(table)
+      .insert(copy)
+      .select()
+      .single();
+
+    if (insertError || !duplicated) {
+      console.error("[Duplicate] Erro ao inserir cópia:", insertError);
+      return c.json(
+        {
+          success: false,
+          error: "Erro ao duplicar registro",
+          message: insertError?.message || "Falha ao criar cópia do registro",
+        },
+        500
+      );
+    }
+
+    console.log(`[Duplicate] Registro duplicado com sucesso. Novo ID: ${duplicated.id}`);
+
+    return c.json({
+      success: true,
+      data: duplicated,
+      message: "Registro duplicado com sucesso",
+    });
+  } catch (error) {
+    console.error("[Duplicate] Erro ao duplicar:", error);
+    return c.json(
+      {
+        success: false,
+        error: "Erro interno",
+        message: error instanceof Error ? error.message : "Erro desconhecido",
+      },
+      500
+    );
+  }
+});
+
 export { documents };
 // Ingestão de conhecimento (admin)
 const IngestKnowledgeSchema = z.object({

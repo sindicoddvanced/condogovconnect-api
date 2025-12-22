@@ -23,6 +23,13 @@ export class DocumentService {
   private openaiDirect?: OpenAI; // Para TTS (Text-to-Speech) direto
   private ragService: RAGService;
   private supabase = getSupabaseServiceClient();
+  // Armazenamento temporário para apresentações geradas via OpenRouter
+  private gammaStorage = new Map<string, {
+    content: string;
+    format: string;
+    status: string;
+    createdAt: Date;
+  }>();
 
   constructor() {
     // OpenRouter para modelos de chat (GPT-5, Gemini)
@@ -2114,7 +2121,7 @@ ${fileText}`,
   }
 
   /**
-   * Gera apresentação/documento usando Gamma API
+   * Gera apresentação/documento usando OpenRouter (IA) ao invés da API do Gamma
    */
   async generateGamma(
     request: {
@@ -2166,65 +2173,115 @@ ${fileText}`,
     message?: string;
   }> {
     try {
-      const gammaApiKey = process.env.GAMMA_API_KEY;
-      if (!gammaApiKey) {
-        throw new Error("GAMMA_API_KEY não configurada no ambiente");
-      }
-
-      console.log("[GammaGeneration] Iniciando geração com Gamma");
+      console.log("[GammaGeneration] Iniciando geração com OpenRouter (IA)");
       console.log("[GammaGeneration] Formato:", request.format || "presentation");
       console.log("[GammaGeneration] Texto (primeiros 100 chars):", request.inputText.substring(0, 100));
 
       const startTime = Date.now();
+      const format = request.format || "presentation";
+      const numCards = request.numCards || 10;
+      const language = request.textOptions?.language || "pt-BR";
+      const tone = request.textOptions?.tone || "profissional";
+      const audience = request.textOptions?.audience || "geral";
+      const amount = request.textOptions?.amount || "medium";
 
-      const payload: any = {
-        inputText: request.inputText,
-        textMode: request.textMode || "generate",
-        format: request.format || "presentation",
-      };
+      // Construir prompt baseado no formato
+      let formatInstructions = "";
+      if (format === "presentation") {
+        formatInstructions = `Crie uma apresentação com aproximadamente ${numCards} slides. Cada slide deve ter um título claro e conteúdo conciso. Use formatação Markdown com ## para títulos de slides e ### para subtítulos.`;
+      } else if (format === "document") {
+        formatInstructions = `Crie um documento completo e bem estruturado. Use formatação Markdown com títulos hierárquicos (##, ###).`;
+      } else if (format === "webpage") {
+        formatInstructions = `Crie conteúdo para uma página web. Use formatação Markdown apropriada para web.`;
+      } else if (format === "social") {
+        formatInstructions = `Crie conteúdo para redes sociais. Use formatação Markdown e seja conciso e envolvente.`;
+      }
 
-      if (request.themeId) payload.themeId = request.themeId;
-      if (request.numCards) payload.numCards = request.numCards;
-      if (request.cardSplit) payload.cardSplit = request.cardSplit;
-      if (request.additionalInstructions) payload.additionalInstructions = request.additionalInstructions;
-      if (request.folderIds && request.folderIds.length > 0) payload.folderIds = request.folderIds;
-      if (request.exportAs && request.exportAs.length > 0) payload.exportAs = request.exportAs;
-      if (request.textOptions) payload.textOptions = request.textOptions;
-      if (request.imageOptions) payload.imageOptions = request.imageOptions;
-      if (request.cardOptions) payload.cardOptions = request.cardOptions;
-      if (request.sharingOptions) payload.sharingOptions = request.sharingOptions;
+      const systemPrompt = `Você é um especialista em criação de ${format === "presentation" ? "apresentações" : format === "document" ? "documentos" : format === "webpage" ? "conteúdo web" : "posts para redes sociais"}.
 
-      const response = await fetch("https://public-api.gamma.app/v1.0/generations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-KEY": gammaApiKey,
-        },
-        body: JSON.stringify(payload),
+Sua tarefa é criar conteúdo de alta qualidade baseado no texto fornecido pelo usuário.
+
+REGRAS:
+- Use APENAS o conteúdo fornecido pelo usuário como base
+- ${formatInstructions}
+- Idioma: ${language}
+- Tom: ${tone}
+- Público-alvo: ${audience}
+- Quantidade de detalhes: ${amount === "brief" ? "breve e objetivo" : amount === "medium" ? "moderado" : amount === "detailed" ? "detalhado" : "muito detalhado"}
+- Use formatação Markdown apropriada
+- Seja claro, objetivo e profissional
+${request.additionalInstructions ? `\nINSTRUÇÕES ADICIONAIS: ${request.additionalInstructions}` : ""}
+
+FORMATO DE SAÍDA:
+- Use Markdown para formatação
+- Títulos principais: ##
+- Subtítulos: ###
+- Listas com - ou *
+- Destaque importante com **negrito**
+- Separe slides/seções claramente`;
+
+      const userPrompt = `Crie ${format === "presentation" ? "uma apresentação" : format === "document" ? "um documento" : format === "webpage" ? "conteúdo web" : "conteúdo para redes sociais"} baseado no seguinte texto:
+
+${request.inputText}
+
+${request.textMode === "condense" ? "Condense o conteúdo mantendo as informações principais." : request.textMode === "preserve" ? "Preserve o conteúdo original o máximo possível." : "Expanda e enriqueça o conteúdo de forma profissional."}`;
+
+      console.log("[GammaGeneration] Enviando requisição para OpenRouter...");
+      
+      const completion = await this.openaiRouter.chat.completions.create({
+        model: "google/gemini-2.5-pro", // Usar Gemini 2.5 Pro via OpenRouter
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 8000,
       });
 
       const elapsedTime = Date.now() - startTime;
       console.log("[GammaGeneration] Requisição concluída em", elapsedTime, "ms");
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          `Gamma API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`
-        );
+      if (!completion.choices || completion.choices.length === 0) {
+        throw new Error("Resposta do OpenRouter não contém conteúdo gerado");
       }
 
-      const data = await response.json() as { generationId: string };
-      console.log("[GammaGeneration] Gamma ID:", data.generationId);
+      const generatedContent = completion.choices[0].message?.content || "";
+      if (!generatedContent) {
+        throw new Error("Conteúdo gerado está vazio");
+      }
+
+      console.log("[GammaGeneration] Conteúdo gerado, tamanho:", generatedContent.length, "caracteres");
+
+      // Gerar ID único para esta apresentação
+      const generationId = `gamma_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      // Armazenar o conteúdo gerado
+      this.gammaStorage.set(generationId, {
+        content: generatedContent,
+        format: format,
+        status: "completed",
+        createdAt: new Date(),
+      });
+
+      // Limpar apresentações antigas (mais de 24 horas)
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      for (const [id, data] of this.gammaStorage.entries()) {
+        if (data.createdAt.getTime() < oneDayAgo) {
+          this.gammaStorage.delete(id);
+        }
+      }
+
+      console.log("[GammaGeneration] Apresentação gerada com ID:", generationId);
 
       return {
-        generationId: data.generationId,
-        status: "processing",
-        message: "Gamma está sendo gerado. Use o generationId para verificar o status.",
+        generationId: generationId,
+        status: "completed",
+        message: "Apresentação gerada com sucesso usando IA.",
       };
     } catch (error) {
-      console.error("[GammaGeneration] Erro ao gerar Gamma:", error);
+      console.error("[GammaGeneration] Erro ao gerar apresentação:", error);
       throw new Error(
-        `Failed to generate Gamma: ${
+        `Failed to generate presentation: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
@@ -2232,7 +2289,7 @@ ${fileText}`,
   }
 
   /**
-   * Obtém status e URLs dos arquivos gerados pelo Gamma
+   * Obtém status e conteúdo da apresentação gerada via OpenRouter
    */
   async getGammaStatus(generationId: string): Promise<{
     status: string;
@@ -2241,45 +2298,45 @@ ${fileText}`,
       pdfUrl?: string;
       pptxUrl?: string;
     };
+    content?: string; // Conteúdo Markdown gerado
+    format?: string; // Formato da apresentação
     error?: string;
   }> {
     try {
-      const gammaApiKey = process.env.GAMMA_API_KEY;
-      if (!gammaApiKey) {
-        throw new Error("GAMMA_API_KEY não configurada no ambiente");
+      console.log("[GammaStatus] Verificando status da apresentação:", generationId);
+
+      // Verificar se a apresentação está no armazenamento
+      const stored = this.gammaStorage.get(generationId);
+      
+      if (!stored) {
+        // Se não encontrado, pode ser um ID antigo ou inválido
+        return {
+          status: "not_found",
+          error: "Apresentação não encontrada. O ID pode ter expirado (apresentações são mantidas por 24 horas).",
+        };
       }
 
-      console.log("[GammaStatus] Verificando status do Gamma:", generationId);
-
-      const response = await fetch(
-        `https://public-api.gamma.app/v1.0/generations/${generationId}`,
-        {
-          method: "GET",
-          headers: {
-            "X-API-KEY": gammaApiKey,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          `Gamma API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`
-        );
-      }
-
-      const data = await response.json() as { status?: string; fileUrls?: { gammaUrl?: string; pdfUrl?: string; pptxUrl?: string }; error?: string };
-      console.log("[GammaStatus] Status:", data.status);
+      console.log("[GammaStatus] Status:", stored.status);
+      console.log("[GammaStatus] Formato:", stored.format);
+      console.log("[GammaStatus] Tamanho do conteúdo:", stored.content.length, "caracteres");
 
       return {
-        status: data.status || "unknown",
-        fileUrls: data.fileUrls || {},
-        error: data.error,
+        status: stored.status,
+        content: stored.content,
+        format: stored.format,
+        // URLs não são aplicáveis para conteúdo gerado via IA
+        // O frontend pode usar o conteúdo Markdown diretamente
+        fileUrls: {
+          gammaUrl: undefined,
+          pdfUrl: undefined,
+          pptxUrl: undefined,
+        },
+        error: stored.status === "failed" ? "Falha ao gerar apresentação" : undefined,
       };
     } catch (error) {
       console.error("[GammaStatus] Erro ao verificar status:", error);
       throw new Error(
-        `Failed to get Gamma status: ${
+        `Failed to get presentation status: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
