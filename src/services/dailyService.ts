@@ -231,10 +231,9 @@ export class DailyService {
     const requestUrl = `${this.baseUrl}/rooms/${roomName}/recordings/start`;
     
     // Construir body dinamicamente
-    const body: any = {
-      format: options?.format || "mp4",
-      resolution: options?.resolution || "720p",
-    };
+    // Nota: A API do Daily.co não aceita os parâmetros 'format' e 'resolution' na requisição de gravação
+    // Apenas 'layout' e 'max_duration' são aceitos
+    const body: any = {};
     
     // Layout deve ser um objeto, não uma string
     if (options?.layout) {

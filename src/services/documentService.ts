@@ -515,11 +515,11 @@ REGRAS CRÍTICAS:
 IMPORTANTE: Retorne APENAS a transcrição literal do áudio, sem adicionar informações externas, sem inventar conteúdo, sem fazer interpretações. Transcreva EXATAMENTE o que você ouve.`;
       
       const messages: any[] = [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
               text: promptText,
             },
             audioContent,
@@ -581,7 +581,7 @@ IMPORTANTE: Retorne APENAS a transcrição literal do áudio, sem adicionar info
           response: requestError?.response,
           stack: requestError?.stack,
         });
-        
+      
         // Se o erro for 500, pode ser arquivo muito grande ou problema temporário
         if (requestError?.status === 500) {
           console.error(`[Transcription] Erro 500 do OpenRouter. Possíveis causas:`);
@@ -589,10 +589,10 @@ IMPORTANTE: Retorne APENAS a transcrição literal do áudio, sem adicionar info
           console.error(`[Transcription] - Payload muito grande (${messageSizeKB.toFixed(2)} KB)`);
           console.error(`[Transcription] - Problema temporário do OpenRouter`);
           console.error(`[Transcription] - Formato não suportado (vídeo como input_audio)`);
-        }
-        
-        throw requestError;
       }
+      
+        throw requestError;
+    }
 
       const elapsedTime = Date.now() - startTime;
       console.log("[Transcription] Resposta recebida em", elapsedTime, "ms");
@@ -613,7 +613,7 @@ IMPORTANTE: Retorne APENAS a transcrição literal do áudio, sem adicionar info
       if (!completion.choices || completion.choices.length === 0) {
         console.error("[Transcription] Resposta do Gemini não contém choices");
         console.error("[Transcription] Resposta completa:", JSON.stringify(completion, null, 2));
-        
+      
         // Verificar se há erro na resposta do OpenRouter
         if ((completion as any).error) {
           const error = (completion as any).error;
@@ -655,14 +655,14 @@ IMPORTANTE: Retorne APENAS a transcrição literal do áudio, sem adicionar info
       // Limpar texto removendo explicações mas PRESERVANDO parágrafos e quebras de linha
       const originalLength = text.length;
       text = this.cleanTranscriptionText(text);
-      
+
       // Garantir que parágrafos estejam bem formatados com quebras de linha adequadas
       text = this.formatTranscriptionParagraphs(text);
       
       console.log("[Transcription] Texto após limpeza e formatação, tamanho:", text.length, "caracteres");
       console.log("[Transcription] Caracteres removidos:", originalLength - text.length);
       console.log("[Transcription] Primeiros 200 caracteres após formatação:", text.substring(0, 200));
-      
+
       return {
         text,
         confidence: 0.95, // Gemini geralmente tem alta confiança
@@ -1885,9 +1885,40 @@ FORMATO DE RESPOSTA JSON:
           } else if (extension === 'pdf') {
             // Tentar extrair texto do PDF
             try {
-              const pdfParse = require('pdf-parse');
-              const pdfData = await pdfParse(fileBuffer);
-              fileText = pdfData.text;
+              // pdf-parse tem problemas com ESM, usar require
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              const pdfParseModule = require("pdf-parse");
+              
+              // PDFParse é uma classe, precisa ser instanciada
+              let pdfParser: any = null;
+              
+              if (typeof pdfParseModule === 'function') {
+                // Se o módulo em si é uma função (caso raro)
+                pdfParser = new pdfParseModule({ data: fileBuffer });
+              } else if (pdfParseModule.PDFParse && typeof pdfParseModule.PDFParse === 'function') {
+                // Usar a classe PDFParse
+                pdfParser = new pdfParseModule.PDFParse({ data: fileBuffer });
+              } else {
+                // Tentar importação dinâmica como último recurso
+                try {
+                  const pdfParseDynamic: any = await import("pdf-parse");
+                  const PDFParseClass = pdfParseDynamic.PDFParse || pdfParseDynamic.default?.PDFParse || pdfParseDynamic.default;
+                  if (!PDFParseClass || typeof PDFParseClass !== 'function') {
+                    throw new Error('PDFParse class não encontrada no módulo');
+                  }
+                  pdfParser = new PDFParseClass({ data: fileBuffer });
+                } catch (importError) {
+                  throw new Error('Não foi possível carregar pdf-parse. Verifique se o módulo está instalado.');
+                }
+              }
+              
+              if (!pdfParser) {
+                throw new Error('Não foi possível criar instância do PDFParse');
+              }
+              
+              // Obter o texto do PDF
+              const pdfText = await pdfParser.getText();
+              fileText = pdfText.text || '';
             } catch (pdfError) {
               throw new Error(`Erro ao extrair texto do PDF: ${pdfError instanceof Error ? pdfError.message : 'Erro desconhecido'}`);
             }
@@ -2245,7 +2276,7 @@ ${request.textMode === "condense" ? "Condense o conteúdo mantendo as informaç�
         throw new Error("Resposta do OpenRouter não contém conteúdo gerado");
       }
 
-      const generatedContent = completion.choices[0].message?.content || "";
+      const generatedContent = completion.choices[0]?.message?.content || "";
       if (!generatedContent) {
         throw new Error("Conteúdo gerado está vazio");
       }
@@ -2470,46 +2501,112 @@ ${request.textMode === "condense" ? "Condense o conteúdo mantendo as informaç�
     nextCursor?: string;
   }> {
     try {
-      const gammaApiKey = process.env.GAMMA_API_KEY;
-      if (!gammaApiKey) {
-        throw new Error("GAMMA_API_KEY não configurada no ambiente");
-      }
+      console.log("[GammaThemes] Listando temas padrão...");
 
-      const params = new URLSearchParams();
-      if (options?.query) params.append("query", options.query);
-      if (options?.limit) params.append("limit", options.limit.toString());
-      if (options?.after) params.append("after", options.after);
-
-      const url = `https://public-api.gamma.app/v1.0/themes${params.toString() ? `?${params.toString()}` : ""}`;
-
-      console.log("[GammaThemes] Listando temas...");
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "X-API-KEY": gammaApiKey,
+      // Lista de temas padrão (sem dependência da API externa do Gamma)
+      const defaultThemes: Array<{
+        id: string;
+        name: string;
+        type: string;
+        colorKeywords?: string[];
+        toneKeywords?: string[];
+      }> = [
+        {
+          id: "professional",
+          name: "Profissional",
+          type: "business",
+          colorKeywords: ["azul", "cinza", "branco"],
+          toneKeywords: ["formal", "corporativo", "confiável"],
         },
-      });
+        {
+          id: "modern",
+          name: "Moderno",
+          type: "design",
+          colorKeywords: ["preto", "branco", "accent"],
+          toneKeywords: ["contemporâneo", "limpo", "minimalista"],
+        },
+        {
+          id: "minimalist",
+          name: "Minimalista",
+          type: "design",
+          colorKeywords: ["branco", "cinza claro", "preto"],
+          toneKeywords: ["simples", "elegante", "focado"],
+        },
+        {
+          id: "creative",
+          name: "Criativo",
+          type: "creative",
+          colorKeywords: ["colorido", "vibrante", "diverso"],
+          toneKeywords: ["inovador", "dinâmico", "expressivo"],
+        },
+        {
+          id: "corporate",
+          name: "Corporativo",
+          type: "business",
+          colorKeywords: ["azul escuro", "dourado", "branco"],
+          toneKeywords: ["executivo", "premium", "autoridade"],
+        },
+        {
+          id: "academic",
+          name: "Acadêmico",
+          type: "education",
+          colorKeywords: ["verde", "azul", "branco"],
+          toneKeywords: ["educacional", "informativo", "claro"],
+        },
+        {
+          id: "pitch",
+          name: "Pitch Deck",
+          type: "business",
+          colorKeywords: ["preto", "branco", "destaque"],
+          toneKeywords: ["persuasivo", "impactante", "direto"],
+        },
+        {
+          id: "report",
+          name: "Relatório",
+          type: "business",
+          colorKeywords: ["azul", "cinza", "branco"],
+          toneKeywords: ["analítico", "detalhado", "profissional"],
+        },
+        {
+          id: "portfolio",
+          name: "Portfólio",
+          type: "creative",
+          colorKeywords: ["personalizado", "diverso", "expressivo"],
+          toneKeywords: ["pessoal", "criativo", "único"],
+        },
+        {
+          id: "presentation",
+          name: "Apresentação Geral",
+          type: "general",
+          colorKeywords: ["versátil", "adaptável"],
+          toneKeywords: ["flexível", "universal"],
+        },
+      ];
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          `Gamma API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`
+      // Filtrar por query se fornecido
+      let filteredThemes = defaultThemes;
+      if (options?.query) {
+        const queryLower = options.query.toLowerCase();
+        filteredThemes = defaultThemes.filter(
+          (theme) =>
+            theme.name.toLowerCase().includes(queryLower) ||
+            theme.type.toLowerCase().includes(queryLower) ||
+            theme.colorKeywords?.some((kw) => kw.toLowerCase().includes(queryLower)) ||
+            theme.toneKeywords?.some((kw) => kw.toLowerCase().includes(queryLower))
         );
       }
 
-      const data = await response.json() as Array<any> | { themes?: Array<any>; nextCursor?: string };
-      console.log("[GammaThemes] Temas encontrados:", Array.isArray(data) ? data.length : "N/A");
+      // Aplicar limite
+      const limit = options?.limit || 50;
+      const themes = filteredThemes.slice(0, limit);
 
-      // Gamma pode retornar array ou objeto com paginação
-      if (Array.isArray(data)) {
-        return { themes: data };
-      } else {
-        return {
-          themes: data.themes || [],
-          nextCursor: data.nextCursor,
-        };
-      }
+      console.log(`[GammaThemes] ${themes.length} temas encontrados`);
+
+      return {
+        themes,
+        // Não há paginação real, mas retornamos nextCursor como undefined se não houver mais
+        nextCursor: filteredThemes.length > limit ? "has_more" : undefined,
+      };
     } catch (error) {
       console.error("[GammaThemes] Erro ao listar temas:", error);
       throw new Error(

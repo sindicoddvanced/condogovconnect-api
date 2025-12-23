@@ -384,7 +384,7 @@ documents.post("/transcribe-audio", async (c) => {
       // Processar upload de arquivo
       const formData = await c.req.formData();
       const audioFile = formData.get("audioFile") as File;
-      
+
       if (!audioFile) {
         throw new Error("Arquivo de áudio é obrigatório");
       }
@@ -426,7 +426,7 @@ documents.post("/transcribe-audio", async (c) => {
       } catch (e) {
         console.warn("[TranscribeAudio] Erro ao parsear summaryOptions:", e);
       }
-
+      
       body = {
         companyId,
         meetingId: meetingId || undefined,
